@@ -1,5 +1,5 @@
 export const state = {
-    gmId: null,
+    gm: null,
     decks: new Map(),
-    piles: new Map(),
+    discards: new Map()
 };

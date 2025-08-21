@@ -1,13 +1,14 @@
 import { SlashCommandBuilder } from "discord.js";
-import { state } from "../state";
+import { state } from "../state.js";
 export const data = new SlashCommandBuilder()
     .setName("carte")
-    .setDescription("Mostra quante carte restano nel tuo mazzo");
+    .setDescription("Mostra la pila degli scarti del tuo mazzo");
 export async function execute(interaction) {
-    const deck = state.decks.get(interaction.user.id);
+    const userId = interaction.user.id;
+    const deck = state.decks.get(userId);
     if (!deck) {
-        await interaction.reply("Non hai ancora un mazzo. Ti verrà creato alla prima pescata.");
-        return;
+        return interaction.reply({ content: "❌ Non hai ancora un mazzo.", ephemeral: true });
     }
-    await interaction.reply(`📦 Carte rimaste nel tuo mazzo: ${deck.length}`);
+    const pile = state.discards.get(userId) || [];
+    await interaction.reply({ content: `📜 Pila degli scarti: ${pile.join(", ") || "vuota"}`, ephemeral: true });
 }

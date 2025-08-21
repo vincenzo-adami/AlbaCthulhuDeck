@@ -1,41 +1,28 @@
 import { SlashCommandBuilder } from "discord.js";
-import { state } from "../state";
-import { createDeck, shuffle } from "../utils/deck";
+import { state } from "../state.js";
+import { createDeck, shuffle } from "../utils/deck.js";
 export const data = new SlashCommandBuilder()
     .setName("pesca")
-    .setDescription("Pesca una carta per un giocatore (solo GM)")
-    .addUserOption(option => option.setName("giocatore").setDescription("Il giocatore").setRequired(true));
+    .setDescription("Il GM fa pescare una carta a un giocatore")
+    .addUserOption(option => option.setName("giocatore").setDescription("Seleziona il giocatore").setRequired(true));
 export async function execute(interaction) {
-    if (interaction.user.id !== state.gmId) {
-        await interaction.reply("❌ Solo il GM può far pescare le carte.");
-        return;
+    if (interaction.user.id !== state.gm) {
+        return interaction.reply({ content: "❌ Solo il GM può far pescare!", ephemeral: true });
     }
-    const player = interaction.options.getUser("giocatore", true);
-    // se il giocatore non ha mazzo → crea
-    if (!state.decks.has(player.id)) {
-        state.decks.set(player.id, createDeck());
-        state.piles.set(player.id, []);
-    }
-    let deck = state.decks.get(player.id);
-    let pile = state.piles.get(player.id);
-    // se mazzo finito → ricrea
-    if (deck.length === 0) {
+    const user = interaction.options.getUser("giocatore", true);
+    let deck = state.decks.get(user.id);
+    if (!deck) {
         deck = createDeck();
-        state.decks.set(player.id, deck);
-        pile = [];
-        state.piles.set(player.id, pile);
+        state.decks.set(user.id, deck);
+        state.discards.set(user.id, []);
     }
     const card = deck.shift();
-    pile.push(card);
-    let msg = `${player.username} ha pescato: **${card}**`;
+    const discardPile = state.discards.get(user.id);
+    discardPile.push(card);
     if (card === "A♠") {
-        deck.push(...pile);
+        deck.push(...discardPile);
         shuffle(deck);
-        state.decks.set(player.id, deck);
-        state.piles.set(player.id, []);
-        msg += "\n💥 È uscito l'Asso di Picche! Pila rimescolata nel mazzo.";
+        state.discards.set(user.id, []);
     }
-    msg += `\n📦 Carte nel mazzo: ${deck.length}`;
-    msg += `\n🃏 Carte nella pila: ${pile.length}`;
-    await interaction.reply(msg);
+    await interaction.reply({ content: `🎴 ${user.username} ha pescato: ${card}`, ephemeral: false });
 }
