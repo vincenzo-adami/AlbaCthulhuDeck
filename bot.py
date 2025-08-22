@@ -112,7 +112,6 @@ class MyClient(discord.Client):
         await self.tree.sync(guild=guild)
 
         # Copia i comandi globali nel server specifico
-        self.tree.copy_global_to(guild=guild)
         synced = await self.tree.sync(guild=guild)
 
         print(f"✅ Comandi sincronizzati su {GUILD_ID}: {[cmd.name for cmd in synced]}")
