@@ -127,12 +127,13 @@ async def pesca(interaction: discord.Interaction):
 #     carte = pesca_carte(interaction.user.id, 5)
 #     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
 
-# Comando pesca_n corretto
+# Comando per pesca_n
 @client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
 async def pesca_n(interaction: discord.Interaction, numero: int):
-    # peschiamo le carte usando la funzione che gestisce anche scarti e jolly
+    # pesca usando la funzione già definita che gestisce mazzo, assi e jolly
     pescate = pesca_carte(interaction.user.id, numero)
     await interaction.response.send_message(f"Hai pescato: {', '.join(pescate)}")
+
 
 
 @client.tree.command(name="mischia", description="Rimischia il tuo mazzo senza i jolly")
