@@ -115,15 +115,18 @@ class MyClient(discord.Client):
     async def setup_hook(self):
         guild = discord.Object(id=GUILD_ID)
 
-        # Cancella tutti i comandi attuali della guild
-        commands = await self.tree.fetch_commands(guild=guild)
-        for cmd in commands:
-            await self.tree.delete_command(cmd.id, guild=guild)
+        # Prendi tutti i comandi attuali sul server
+        existing = await self.tree.fetch_guild_commands(guild.id)
+        
+        # Rimuovi tutti i comandi dal server
+        for cmd in existing:
+            await self.tree.remove_command(cmd.name, guild=guild)
 
-        # Sincronizza i comandi attuali definiti nel codice
+        # Copia solo i comandi globali sul server
         self.tree.copy_global_to(guild=guild)
-        synced = await self.tree.sync(guild=guild)
-        print(f"✅ Comandi sincronizzati sulla guild {GUILD_ID}: {[cmd.name for cmd in synced]}")
+
+        # Sincronizza il server (registrando solo i comandi copiati)
+        await self.tree.sync(guild=guild)
 
 client = MyClient()
 
