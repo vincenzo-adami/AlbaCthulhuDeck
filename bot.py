@@ -32,36 +32,46 @@ def mescola_mazzo(mazzo):
     return mazzo
 
 def pesca_carte(user_id, n=1):
+    # inizializza mazzo se necessario
     if user_id not in mazzi:
         mazzi[user_id] = mescola_mazzo(crea_mazzo())
         scarti[user_id] = []
         jolly_in_mano[user_id] = []
 
     pescate = []
-    for _ in range(n):
-        if not mazzi[user_id]:
-            mazzi[user_id] = mescola_mazzo(crea_mazzo())
+    remaining = n
+
+    while remaining > 0 and mazzi[user_id]:
         carta = mazzi[user_id].pop(0)
-        # Asso di picche rimescola tutti gli scarti eccetto i jolly
+
         if carta == "A♠️":
-            mazzi_user = [c for c in scarti[user_id] if c not in jolly]
-            mazzi[user_id] += mescola_mazzo(mazzi_user)
+            # rimescola tutti gli scarti eccetto i jolly + Asso di picche
+            mazzi[user_id] += mescola_mazzo([c for c in scarti[user_id] if c not in jolly] + ["A♠️"])
             scarti[user_id] = [c for c in scarti[user_id] if c in jolly]
-            scarti[user_id].append(carta)
-        # Jolly vanno in mano e negli scarti
+            # non decrementare remaining perché l'Asso non conta ancora come pescato
+            continue
+
         elif carta in jolly:
             jolly_in_mano[user_id].append(carta)
             scarti[user_id].append(carta)
         else:
             scarti[user_id].append(carta)
+
         pescate.append(carta)
+        remaining -= 1
+
     return pescate
+
 
 def rimischia(user_id):
     if user_id in mazzi:
-        mazzi[user_id] = mescola_mazzo([c for c in mazzi[user_id] if c not in jolly])
+        # reintegra scarti tranne jolly e mischia
+        mazzi[user_id] += [c for c in scarti[user_id] if c not in jolly]
+        scarti[user_id] = [c for c in scarti[user_id] if c in jolly]
+        mescola_mazzo(mazzi[user_id])
         return True
     return False
+
 
 def rimetti_jolly(user_id):
     if user_id in mazzi:
@@ -69,24 +79,22 @@ def rimetti_jolly(user_id):
         mescola_mazzo(mazzi[user_id])
         jolly_in_mano[user_id] = []
 
-def get_scarti_text(user_id):
-    if user_id not in scarti or not scarti[user_id]:
+
+def get_scarti(user_id):
+    if user_id not in scarti:
         return None
-    carte = scarti[user_id][:]  # carte già scartate
-    # aggiungi jolly pescati ma non ancora rimessi nel mazzo
-    carte += jolly_in_mano.get(user_id, [])
+    carte = scarti[user_id][:] + jolly_in_mano.get(user_id, [])
     
-    j = [c for c in jolly if c in carte]  # separa jolly
+    j = [c for c in jolly if c in carte]
     resto = [c for c in carte if c not in j]
-    
-    # ordinamento per seme
+
     seme_dict = {s: [] for s in semi}
     for c in resto:
         for s in semi:
             if s in c:
                 seme_dict[s].append(c)
                 break
-    
+
     risultato = []
     if j:
         risultato += j
@@ -128,43 +136,28 @@ deck = []
 # Comandi slash
 # ===============================
 
-@client.tree.command(name="pesca", description="Pesca una carta")
-async def pesca(interaction: discord.Interaction):
-    user_id = interaction.user.id
-    carte = pesca_carte(user_id, 1)
-    await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
-
-@client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
-async def pesca_n(interaction: discord.Interaction, numero: int):
-    global deck
-    user_id = interaction.user.id
-
-    # inizializza deck se vuoto
-    if not deck:
-        deck = crea_mazzo()  # contiene anche i jolly
-        mescola_mazzo(deck)
+def pesca_carte(user_id, n=1):
+    # inizializza mazzo se necessario
+    if user_id not in mazzi:
+        mazzi[user_id] = mescola_mazzo(crea_mazzo())
+        scarti[user_id] = []
+        jolly_in_mano[user_id] = []
 
     pescate = []
-    remaining = numero
+    remaining = n
 
-    while remaining > 0 and deck:
-        carta = deck.pop(0)
+    while remaining > 0 and mazzi[user_id]:
+        carta = mazzi[user_id].pop(0)
 
         if carta == "A♠️":
-            # rimescola tutti gli scarti tranne i jolly e l'asso stesso
-            mazzi_user = [c for c in pescate + deck if c not in jolly] + [carta]
-            mescola_mazzo(mazzi_user)
-            deck = mazzi_user
-            continue  # continua a pescare le carte rimanenti
+            # rimescola tutti gli scarti eccetto i jolly + Asso di picche
+            mazzi[user_id] += mescola_mazzo([c for c in scarti[user_id] if c not in jolly] + ["A♠️"])
+            scarti[user_id] = [c for c in scarti[user_id] if c in jolly]
+            # non decrementare remaining perché l'Asso non conta ancora come pescato
+            continue
 
-        if user_id not in scarti:
-            scarti[user_id] = []
-
-        if carta in jolly:
-            if user_id not in jolly_in_mano:
-                jolly_in_mano[user_id] = []
+        elif carta in jolly:
             jolly_in_mano[user_id].append(carta)
-            # aggiungi subito il jolly anche agli scarti
             scarti[user_id].append(carta)
         else:
             scarti[user_id].append(carta)
@@ -172,27 +165,48 @@ async def pesca_n(interaction: discord.Interaction, numero: int):
         pescate.append(carta)
         remaining -= 1
 
-    await interaction.response.send_message(f"Hai pescato: {', '.join(pescate)}")
+    return pescate
 
 
-@client.tree.command(name="mischia", description="Rimischia il tuo mazzo senza i jolly")
-async def mischia(interaction: discord.Interaction):
-    rimischia(interaction.user.id)
-    await interaction.response.send_message("Il tuo mazzo è stato rimischiato (i jolly non sono stati rimessi).")
+def rimischia(user_id):
+    if user_id in mazzi:
+        # reintegra scarti tranne jolly e mischia
+        mazzi[user_id] += [c for c in scarti[user_id] if c not in jolly]
+        scarti[user_id] = [c for c in scarti[user_id] if c in jolly]
+        mescola_mazzo(mazzi[user_id])
+        return True
+    return False
 
-@client.tree.command(name="jolly", description="Rimetti i jolly nel mazzo e mescola")
-async def jolly_cmd(interaction: discord.Interaction):
-    rimetti_jolly(interaction.user.id)
-    await interaction.response.send_message("I jolly sono stati rimessi nel mazzo e il mazzo è stato rimischiato.")
 
-@client.tree.command(name="scarti", description="Mostra le carte già pescate")
-async def scarti_cmd(interaction: discord.Interaction):
-    user_id = interaction.user.id
-    risultato = get_scarti_text(user_id)
-    if not risultato:
-        await interaction.response.send_message("Non hai ancora scarti.")
-    else:
-        await interaction.response.send_message(f"Le tue carte scartate:\n{risultato}")
+def rimetti_jolly(user_id):
+    if user_id in mazzi:
+        mazzi[user_id] += jolly_in_mano[user_id]
+        mescola_mazzo(mazzi[user_id])
+        jolly_in_mano[user_id] = []
+
+
+def get_scarti(user_id):
+    if user_id not in scarti:
+        return None
+    carte = scarti[user_id][:] + jolly_in_mano.get(user_id, [])
+    
+    j = [c for c in jolly if c in carte]
+    resto = [c for c in carte if c not in j]
+
+    seme_dict = {s: [] for s in semi}
+    for c in resto:
+        for s in semi:
+            if s in c:
+                seme_dict[s].append(c)
+                break
+
+    risultato = []
+    if j:
+        risultato += j
+    for s in semi:
+        if seme_dict[s]:
+            risultato.append(f"**{s}**: " + ", ".join(seme_dict[s]))
+    return "\n".join(risultato)
 
 # ===============================
 # Avvio bot
