@@ -104,10 +104,20 @@ class MyClient(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        # sincronizzazione comandi solo sul server di test per apparire subito
-        GUILD_ID = 301079091640139778  # metti ID server
         guild = discord.Object(id=GUILD_ID)
+
+        # 1. Pulisce i vecchi comandi rimasti nel server
+        commands = await self.tree.fetch_guild_commands(guild.id)
+        for cmd in commands:
+            await self.tree.delete_command(cmd.id, guild=guild)
+            print(f"❌ Cancellato comando vecchio: {cmd.name}")
+
+        # 2. Copia i comandi globali nel server specificato
+        self.tree.copy_global_to(guild=guild)
+
+        # 3. Sincronizza i comandi per quel server
         await self.tree.sync(guild=guild)
+        print("✅ Comandi sincronizzati solo per il server")
 
 client = MyClient()
 
