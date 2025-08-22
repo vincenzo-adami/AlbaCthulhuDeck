@@ -6,7 +6,8 @@ import os
 # ===============================
 # TOKEN
 # ===============================
-TOKEN = os.getenv("TOKEN")  # passato come variabile d'ambiente su Railway
+TOKEN = os.getenv("TOKEN")  # passato come variabile d'ambiente
+GUILD_ID = int(os.getenv("DISCORD_GUILD_ID"))  # anche l’ID del server da env
 
 # ===============================
 # Dati mazzo
@@ -104,20 +105,17 @@ class MyClient(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        guild = discord.Object(id=301079091640139778)
+        guild = discord.Object(id=GUILD_ID)
 
-        # 1. Pulisce i vecchi comandi rimasti nel server
-        commands = await self.tree.fetch_guild_commands(guild.id)
-        for cmd in commands:
-            await self.tree.delete_command(cmd.id, guild=guild)
-            print(f"❌ Cancellato comando vecchio: {cmd.name}")
-
-        # 2. Copia i comandi globali nel server specificato
-        self.tree.copy_global_to(guild=guild)
-
-        # 3. Sincronizza i comandi per quel server
+        # Cancella comandi vecchi
+        self.tree.clear_commands(guild=guild)
         await self.tree.sync(guild=guild)
-        print("✅ Comandi sincronizzati solo per il server")
+
+        # Copia i comandi globali nel server specifico
+        self.tree.copy_global_to(guild=guild)
+        synced = await self.tree.sync(guild=guild)
+
+        print(f"✅ Comandi sincronizzati su {GUILD_ID}: {[cmd.name for cmd in synced]}")
 
 client = MyClient()
 
