@@ -1,6 +1,6 @@
+import os
 import discord
 from discord.ext import commands
-import os
 from utils.deck import create_deck, shuffle_deck
 
 # --- Legge il token ---

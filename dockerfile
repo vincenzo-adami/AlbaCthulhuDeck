@@ -1,16 +1,16 @@
-# Base image
+# Usa immagine Python 3.11
 FROM python:3.11-slim
 
-# Imposta la working directory
+# Imposta la cartella di lavoro
 WORKDIR /app
 
-# Copia solo requirements per caching
+# Copia file di requirements
 COPY requirements.txt .
 
-# Installa dipendenze
+# Installa le dipendenze
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia TUTTO il resto (inclusa la cartella utils)
+# Copia tutto il codice
 COPY . .
 
 # Comando per avviare il bot
