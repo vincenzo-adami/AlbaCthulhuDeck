@@ -108,8 +108,9 @@ class MyClient(discord.Client):
         guild = discord.Object(id=GUILD_ID)
 
         # Cancella tutti i comandi attuali della guild
-        for cmd in await self.tree.fetch_guild_commands(guild.id):
-            await self.tree.delete_guild_command(cmd.id, guild.id)
+        commands = await self.tree.fetch_commands(guild=guild)
+        for cmd in commands:
+            await self.tree.delete_command(cmd.id, guild=guild)
 
         # Sincronizza i comandi attuali definiti nel codice
         self.tree.copy_global_to(guild=guild)
