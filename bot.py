@@ -24,9 +24,7 @@ jolly_in_mano = {}
 # Funzioni mazzo
 # ===============================
 def crea_mazzo():
-    mazzo = [f"{v}{s}" for s in semi for v in valori]
-    mazzo += jolly  # aggiunge i jolly al mazzo
-    return mazzo
+    return [f"{v}{s}" for s in semi for v in valori] + jolly[:]
 
 def mescola_mazzo(mazzo):
     random.shuffle(mazzo)
@@ -43,13 +41,16 @@ def pesca_carte(user_id, n=1):
         if not mazzi[user_id]:
             mazzi[user_id] = mescola_mazzo(crea_mazzo())
         carta = mazzi[user_id].pop(0)
-        # Asso di picche si rimischia automaticamente
+        # Asso di picche rimescola tutti gli scarti eccetto i jolly
         if carta == "A♠️":
-            mazzi[user_id].append(carta)
-            mescola_mazzo(mazzi[user_id])
-        # Jolly non tornano nel mazzo finché non usi /jolly
+            mazzi_user = [c for c in scarti[user_id] if c not in jolly]
+            mazzi[user_id] += mescola_mazzo(mazzi_user)
+            scarti[user_id] = [c for c in scarti[user_id] if c in jolly]
+            scarti[user_id].append(carta)
+        # Jolly vanno in mano e negli scarti
         elif carta in jolly:
             jolly_in_mano[user_id].append(carta)
+            scarti[user_id].append(carta)
         else:
             scarti[user_id].append(carta)
         pescate.append(carta)
@@ -107,58 +108,59 @@ class MyClient(discord.Client):
 client = MyClient()
 
 # ===============================
+# Variabile globale deck per pesca_n
+# ===============================
+deck = []
+
+# ===============================
 # Comandi slash
 # ===============================
-
-# all'inizio del file, subito dopo gli import
-deck = []  # inizializziamo la variabile globale
 
 @client.tree.command(name="pesca", description="Pesca una carta")
 async def pesca(interaction: discord.Interaction):
     carte = pesca_carte(interaction.user.id, 1)
     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
 
-# Comando per pesca_n
 @client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
 async def pesca_n(interaction: discord.Interaction, numero: int):
+    global deck
     user_id = interaction.user.id
 
-    # se il mazzo non esiste lo creiamo e mischiamo
-    if user_id not in mazzi:
-        mazzi[user_id] = mescola_mazzo(crea_mazzo())
+    # inizializziamo liste se mancanti
+    if user_id not in scarti:
         scarti[user_id] = []
+    if user_id not in jolly_in_mano:
         jolly_in_mano[user_id] = []
 
+    # se il deck è vuoto, lo creiamo e mischiamo
+    if not deck:
+        deck = crea_mazzo()
+        mescola_mazzo(deck)
+
     pescate = []
-    remaining = numero
+    i = 0
+    while i < numero and deck:
+        carta = deck.pop()
+        pescate.append(carta)
 
-    while remaining > 0:
-        if not mazzi[user_id]:
-            # Rimettiamo gli scarti nel mazzo, escludendo i jolly, e mischiamo
-            mazzi[user_id] = mescola_mazzo([c for c in scarti[user_id] if c not in jolly])
-            scarti[user_id] = []
-        carta = mazzi[user_id].pop(0)
-
-        # Asso di picche: rimescoliamo mazzo + scarti esclusi i jolly
-        if carta == "A♠️":
-            mazzi[user_id].append(carta)
-            mazzi[user_id] = mescola_mazzo(mazzi[user_id] + [c for c in scarti[user_id] if c not in jolly])
-            scarti[user_id] = []
-            continue  # non conta come pescata, ripeschiamo
-
-        # Jolly vanno in mano
-        elif carta in jolly:
+        # jolly
+        if carta in jolly:
             jolly_in_mano[user_id].append(carta)
+            scarti[user_id].append(carta)
+        # asso di picche
+        elif carta == "A♠️":
+            scarti[user_id].append(carta)
+            mazzi_user = [c for c in scarti[user_id] if c not in jolly]
+            deck += mescola_mazzo(mazzi_user)
+            scarti[user_id] = [c for c in scarti[user_id] if c in jolly]
+            # dopo la rimischiata, pesca le rimanenti carte
+            i += 1
+            continue
         else:
             scarti[user_id].append(carta)
-
-        pescate.append(carta)
-        remaining -= 1
+        i += 1
 
     await interaction.response.send_message(f"Hai pescato: {', '.join(pescate)}")
-
-
-
 
 @client.tree.command(name="mischia", description="Rimischia il tuo mazzo senza i jolly")
 async def mischia(interaction: discord.Interaction):
