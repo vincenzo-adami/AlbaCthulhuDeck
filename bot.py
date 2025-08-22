@@ -107,7 +107,6 @@ class MyClient(discord.Client):
         # sincronizzazione comandi solo sul server di test per apparire subito
         GUILD_ID = 301079091640139778  # metti ID server
         guild = discord.Object(id=GUILD_ID)
-        self.tree.copy_global_to(guild=guild)
         await self.tree.sync(guild=guild)
 
 client = MyClient()
