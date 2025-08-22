@@ -135,7 +135,7 @@ async def pesca_n(interaction: discord.Interaction, numero: int):
     # se il deck è vuoto, lo creiamo e mischiamo
     if not deck:
         deck = crea_mazzo()
-        mischia(deck)
+        mescola_mazzo(deck)
 
     # peschiamo le carte
     pescate = [deck.pop() for _ in range(min(numero, len(deck)))]
