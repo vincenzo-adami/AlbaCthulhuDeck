@@ -107,6 +107,10 @@ client = MyClient()
 # ===============================
 # Comandi slash
 # ===============================
+
+# all'inizio del file, subito dopo gli import
+deck = []  # inizializziamo la variabile globale
+
 @client.tree.command(name="pesca", description="Pesca una carta")
 async def pesca(interaction: discord.Interaction):
     carte = pesca_carte(interaction.user.id, 1)
@@ -122,9 +126,6 @@ async def pesca(interaction: discord.Interaction):
 # async def pesca5(interaction: discord.Interaction):
 #     carte = pesca_carte(interaction.user.id, 5)
 #     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
-
-# all'inizio del file, subito dopo gli import
-deck = []  # inizializziamo la variabile globale
 
 # Comando pesca_n corretto
 @client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
