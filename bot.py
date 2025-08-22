@@ -1,3 +1,4 @@
+import os
 import discord
 from discord.ext import commands
 from decks import create_deck, shuffle_deck
@@ -8,7 +9,7 @@ from decks import create_deck, shuffle_deck
 #    export DISCORD_TOKEN=il_tuo_token   (Linux/Mac)
 #    setx DISCORD_TOKEN "il_tuo_token"   (Windows)
 
-TOKEN = "IL_TUO_TOKEN"  # oppure Railway lo passerà come env
+TOKEN = os.environ.get("DISCORD_TOKEN")  # oppure Railway lo passerà come env
 if not TOKEN:
     raise ValueError("❌ Errore: variabile DISCORD_TOKEN non trovata! "
                      "Configura l'env su Railway oppure in locale.")
