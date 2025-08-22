@@ -188,13 +188,31 @@ async def jolly_cmd(interaction: discord.Interaction):
     rimetti_jolly(interaction.user.id)
     await interaction.response.send_message("I jolly sono stati rimessi nel mazzo e il mazzo è stato rimischiato.")
 
-@client.tree.command(name="scarti", description="Mostra le carte già pescate")
-async def scarti_cmd(interaction: discord.Interaction):
-    risultato = get_scarti(interaction.user.id)
-    if not risultato:
-        await interaction.response.send_message("Non hai ancora scarti.")
-    else:
-        await interaction.response.send_message(f"Le tue carte scartate:\n{risultato}")
+def get_scarti(user_id):
+    if user_id not in scarti or not scarti[user_id]:
+        return None
+    carte = scarti[user_id][:]  # carte già scartate
+    # aggiungi jolly pescati ma non ancora rimessi nel mazzo
+    carte += jolly_in_mano.get(user_id, [])
+    
+    j = [c for c in jolly if c in carte]  # separa jolly
+    resto = [c for c in carte if c not in j]
+    
+    # ordinamento per seme
+    seme_dict = {s: [] for s in semi}
+    for c in resto:
+        for s in semi:
+            if s in c:
+                seme_dict[s].append(c)
+                break
+    
+    risultato = []
+    if j:
+        risultato += j
+    for s in semi:
+        if seme_dict[s]:
+            risultato.append(f"**{s}**: " + ", ".join(seme_dict[s]))
+    return "\n".join(risultato)
 
 # ===============================
 # Avvio bot
