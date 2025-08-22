@@ -1,17 +1,14 @@
-# Usa immagine Python 3.11
+# base image
 FROM python:3.11-slim
 
-# Imposta la cartella di lavoro
+# set working directory
 WORKDIR /app
 
-# Copia file di requirements
-COPY requirements.txt .
-
-# Installa le dipendenze
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copia tutto il codice
+# copia file principali
 COPY . .
 
-# Comando per avviare il bot
+# installa dipendenze
+RUN pip install --no-cache-dir -r requirements.txt
+
+# comando di avvio
 CMD ["python", "bot.py"]

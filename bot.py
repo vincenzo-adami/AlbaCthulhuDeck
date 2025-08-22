@@ -1,7 +1,6 @@
-import os
 import discord
 from discord.ext import commands
-from utils.deck import create_deck, shuffle_deck
+from deck import create_deck, shuffle_deck
 
 # --- Legge il token ---
 # Railway → lo prende dalle "Environment Variables"
@@ -9,13 +8,14 @@ from utils.deck import create_deck, shuffle_deck
 #    export DISCORD_TOKEN=il_tuo_token   (Linux/Mac)
 #    setx DISCORD_TOKEN "il_tuo_token"   (Windows)
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = "IL_TUO_TOKEN"  # oppure Railway lo passerà come env
 if not TOKEN:
     raise ValueError("❌ Errore: variabile DISCORD_TOKEN non trovata! "
                      "Configura l'env su Railway oppure in locale.")
 
 # --- Setup bot ---
 intents = discord.Intents.default()
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # --- Stato del mazzo e scarti ---
