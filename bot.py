@@ -194,7 +194,7 @@ async def jolly_cmd(interaction: discord.Interaction):
     await interaction.response.send_message("I jolly sono stati rimessi nel mazzo e il mazzo è stato rimischiato.")
 
 @client.tree.command(name="scarti", description="Mostra le carte già pescate")
-def get_scarti(user_id):
+async def get_scarti(user_id):
     if user_id not in scarti or not scarti[user_id]:
         return None
     carte = scarti[user_id][:]  # carte già scartate
