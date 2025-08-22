@@ -1,10 +1,12 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
-  "deploy": {
-    "startCommand": "python3 bot.py",
-    "sleepApplication": false
-  },
   "build": {
     "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "runtime": "V2",
+    "numReplicas": 1,
+    "startCommand": "python bot.py",
+    "sleepApplication": false
   }
 }
