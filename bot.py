@@ -104,7 +104,7 @@ class MyClient(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
-        guild = discord.Object(id=GUILD_ID)
+        guild = discord.Object(id=301079091640139778)
 
         # 1. Pulisce i vecchi comandi rimasti nel server
         commands = await self.tree.fetch_guild_commands(guild.id)
