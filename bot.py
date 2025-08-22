@@ -108,13 +108,9 @@ class MyClient(discord.Client):
         guild = discord.Object(id=GUILD_ID)
 
         # Cancella comandi vecchi
-        self.tree.clear_commands(guild=guild)
-        await self.tree.sync(guild=guild)
+        synced = await self.tree.sync(guild=guild, overwrite=True)
 
-        # Copia i comandi globali nel server specifico
-        synced = await self.tree.sync(guild=guild)
-
-        print(f"✅ Comandi sincronizzati su {GUILD_ID}: {[cmd.name for cmd in synced]}")
+        print(f"✅ Comandi sincronizzati e sovrascritti su {GUILD_ID}: {[cmd.name for cmd in synced]}")
 
 client = MyClient()
 
