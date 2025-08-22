@@ -130,15 +130,8 @@ async def pesca(interaction: discord.Interaction):
 # Comando pesca_n corretto
 @client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
 async def pesca_n(interaction: discord.Interaction, numero: int):
-    global deck  # dichiariamo che useremo la variabile globale
-
-    # se il deck è vuoto, lo creiamo e mischiamo
-    if not deck:
-        deck = crea_mazzo()
-        mescola_mazzo(deck)
-
-    # peschiamo le carte
-    pescate = [deck.pop() for _ in range(min(numero, len(deck)))]
+    # peschiamo le carte usando la funzione che gestisce anche scarti e jolly
+    pescate = pesca_carte(interaction.user.id, numero)
     await interaction.response.send_message(f"Hai pescato: {', '.join(pescate)}")
 
 
