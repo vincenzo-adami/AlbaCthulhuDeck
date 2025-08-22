@@ -1,14 +1,18 @@
-# base image
-FROM python:3.11-slim
+# Usa Python 3.12 slim
+FROM python:3.12-slim
 
-# set working directory
+# Imposta la working directory
 WORKDIR /app
 
-# copia file principali
-COPY . .
+# Copia tutti i file del progetto nella cartella di lavoro
+COPY . /app
 
-# installa dipendenze
-RUN pip install --no-cache-dir -r requirements.txt
+# Installa le dipendenze
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir discord.py
 
-# comando di avvio
+# Imposta la variabile d'ambiente del token se non la passi da Railway
+# ENV TOKEN=your_token_here
+
+# Comando per lanciare il bot
 CMD ["python", "bot.py"]
