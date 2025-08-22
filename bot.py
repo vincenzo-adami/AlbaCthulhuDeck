@@ -118,8 +118,29 @@ deck = []
 
 @client.tree.command(name="pesca", description="Pesca una carta")
 async def pesca(interaction: discord.Interaction):
-    carte = pesca_carte(interaction.user.id, 1)
-    await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
+    user_id = interaction.user.id
+
+    # inizializza il mazzo se non esiste
+    if user_id not in mazzi:
+        mazzi[user_id] = mescola_mazzo(crea_mazzo() + jolly[:])
+        scarti[user_id] = []
+        jolly_in_mano[user_id] = []
+
+    # pesca 1 carta
+    carta = mazzi[user_id].pop(0)
+
+    if carta in jolly:
+        jolly_in_mano[user_id].append(carta)
+    elif carta == "A♠️":
+        # rimetti l'asso e gli scarti eccetto jolly nel mazzo
+        mazzi[user_id] += mescola_mazzo([c for c in scarti[user_id] if c not in jolly] + ["A♠️"])
+        # ricostruisci scarti solo con i jolly
+        scarti[user_id] = [c for c in scarti[user_id] if c in jolly]
+    else:
+        scarti[user_id].append(carta)
+
+    await interaction.response.send_message(f"Hai pescato: {carta}")
+
 
 @client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
 async def pesca_n(interaction: discord.Interaction, numero: int):
