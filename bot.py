@@ -1,105 +1,99 @@
 import discord
 from discord.ext import commands
-from dotenv import load_dotenv
 import os
 from utils.deck import create_deck, shuffle_deck
-from state import state
 
-load_dotenv()
+# --- Legge il token ---
+# Railway → lo prende dalle "Environment Variables"
+# Locale → se hai un .env puoi usare python-dotenv, altrimenti puoi esportarlo a mano con:
+#    export DISCORD_TOKEN=il_tuo_token   (Linux/Mac)
+#    setx DISCORD_TOKEN "il_tuo_token"   (Windows)
+
 TOKEN = os.getenv("DISCORD_TOKEN")
+if not TOKEN:
+    raise ValueError("❌ Errore: variabile DISCORD_TOKEN non trovata! "
+                     "Configura l'env su Railway oppure in locale.")
 
+# --- Setup bot ---
 intents = discord.Intents.default()
-bot = commands.Bot(command_prefix="/", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Setup slash commands
+# --- Stato del mazzo e scarti ---
+deck = []
+scarti = []
+
+# --- Eventi ---
 @bot.event
 async def on_ready():
-    print(f"Bot online come {bot.user}")
+    print(f"✅ Bot connesso come {bot.user}")
 
-# Funzione per inizializzare mazzo
-def ensure_deck(user_id):
-    if user_id not in state["decks"]:
-        state["decks"][user_id] = {
-            "mazzo": shuffle_deck(create_deck()),
-            "scarti": [],
-            "jolly": []
-        }
+# --- Comandi slash ---
+@bot.tree.command(name="mischia", description="Mischia il mazzo (senza jolly)")
+async def mischia(interaction: discord.Interaction):
+    global deck, scarti
+    deck = create_deck(include_jokers=False)
+    shuffle_deck(deck)
+    scarti = []
+    await interaction.response.send_message("🔄 Mazzo rimescolato senza jolly!")
 
-# Comando /pesca
-@bot.slash_command(name="pesca", description="Pesca 1 carta")
-async def pesca(ctx: discord.ApplicationContext):
-    ensure_deck(ctx.author.id)
-    deck = state["decks"][ctx.author.id]
-    if not deck["mazzo"]:
-        await ctx.respond("Il mazzo è vuoto!")
+@bot.tree.command(name="jolly", description="Aggiunge i jolly e rimescola tutto")
+async def jolly(interaction: discord.Interaction):
+    global deck, scarti
+    deck = create_deck(include_jokers=True)
+    shuffle_deck(deck)
+    scarti = []
+    await interaction.response.send_message("🃏 Mazzo rimescolato con jolly!")
+
+@bot.tree.command(name="pesca", description="Pesca una o più carte dal mazzo")
+async def pesca(interaction: discord.Interaction, numero: int = 1):
+    global deck, scarti
+    if numero > len(deck):
+        await interaction.response.send_message("❌ Non ci sono abbastanza carte nel mazzo!")
         return
-    card = deck["mazzo"].pop(0)
-    deck["scarti"].append(card)
-    # Se asso di picche rimischia
-    if card == "A♠️":
-        deck["mazzo"] = shuffle_deck(deck["mazzo"] + deck["scarti"][:-1])
-        deck["scarti"] = [card]
-        await ctx.respond(f"Hai pescato {card}. Mazzo rimischiato automaticamente!")
+
+    carte_pescate = [deck.pop(0) for _ in range(numero)]
+    scarti.extend(carte_pescate)
+
+    # Se esce l'asso di picche, rimischia in automatico
+    if "A♠️" in carte_pescate:
+        deck = create_deck(include_jokers=("🃏" in scarti))
+        shuffle_deck(deck)
+        scarti = []
+        await interaction.response.send_message("🂡 È uscito l'asso di ♠️! Il mazzo è stato rimescolato.")
     else:
-        await ctx.respond(f"Hai pescato {card}")
+        await interaction.response.send_message(f"🎴 Carte pescate: {', '.join(carte_pescate)}")
 
-# Comando /pescax
-@bot.slash_command(name="pescax", description="Pesca x carte")
-async def pescax(ctx: discord.ApplicationContext, numero: int):
-    ensure_deck(ctx.author.id)
-    deck = state["decks"][ctx.author.id]
-    if numero < 1:
-        await ctx.respond("Devi pescare almeno una carta!")
+@bot.tree.command(name="scarti", description="Mostra tutte le carte scartate")
+async def mostra_scarti(interaction: discord.Interaction):
+    global scarti
+    if not scarti:
+        await interaction.response.send_message("⚪ Nessuna carta scartata.")
         return
-    pescate = []
-    for _ in range(numero):
-        if not deck["mazzo"]:
-            break
-        card = deck["mazzo"].pop(0)
-        deck["scarti"].append(card)
-        pescate.append(card)
-        if card == "A♠️":
-            deck["mazzo"] = shuffle_deck(deck["mazzo"] + deck["scarti"][:-1])
-            deck["scarti"] = [card]
-    await ctx.respond(f"Hai pescato: {', '.join(pescate)}")
 
-# Comando /mischia
-@bot.slash_command(name="mischia", description="Rimischia il mazzo (senza jolly)")
-async def mischia(ctx: discord.ApplicationContext):
-    ensure_deck(ctx.author.id)
-    deck = state["decks"][ctx.author.id]
-    deck["mazzo"] = shuffle_deck(deck["mazzo"])
-    await ctx.respond("Il tuo mazzo è stato rimischiato!")
+    # Metti i jolly in cima
+    jolly = [c for c in scarti if c == "🃏"]
+    altri = [c for c in scarti if c != "🃏"]
 
-# Comando /jolly
-@bot.slash_command(name="jolly", description="Rimette i jolly nel mazzo e lo rimischia")
-async def jolly(ctx: discord.ApplicationContext):
-    ensure_deck(ctx.author.id)
-    deck = state["decks"][ctx.author.id]
-    jolly_cards = ["JokerN", "JokerR"]
-    for j in jolly_cards:
-        if j not in deck["jolly"]:
-            deck["mazzo"].append(j)
-            deck["jolly"].append(j)
-    deck["mazzo"] = shuffle_deck(deck["mazzo"])
-    await ctx.respond("I Jolly sono stati aggiunti e il mazzo è stato rimischiato!")
+    semi = {"♠️": [], "♥️": [], "♦️": [], "♣️": []}
+    for c in altri:
+        for s in semi.keys():
+            if s in c:
+                semi[s].append(c)
 
-# Comando /scarti
-@bot.slash_command(name="scarti", description="Mostra le carte pescate")
-async def scarti(ctx: discord.ApplicationContext):
-    ensure_deck(ctx.author.id)
-    deck = state["decks"][ctx.author.id]
-    if not deck["scarti"]:
-        await ctx.respond("Non hai ancora scarti!")
-        return
-    # Ordinamento seme
-    semi = ["♠️","♥️","♦️","♣️"]
-    ordinati = []
-    # Aggiungi Jolly in cima se ci sono
-    jolly_presenti = [c for c in deck["scarti"] if "Joker" in c]
-    ordinati.extend(jolly_presenti)
+    # Ordina le carte
+    valori = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
     for s in semi:
-        ordinati.extend([c for c in deck["scarti"] if s in c])
-    await ctx.respond(f"Scarti: {', '.join(ordinati)}")
+        semi[s].sort(key=lambda c: valori.index(c[:-2]))
 
+    # Costruisci messaggio
+    messaggio = []
+    if jolly:
+        messaggio.append("🃏 Jolly: " + ", ".join(jolly))
+    for s, carte in semi.items():
+        if carte:
+            messaggio.append(f"{s}: " + ", ".join(carte))
+
+    await interaction.response.send_message("\n".join(messaggio))
+
+# --- Avvio ---
 bot.run(TOKEN)
