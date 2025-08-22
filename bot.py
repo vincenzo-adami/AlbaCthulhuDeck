@@ -107,20 +107,13 @@ class MyClient(discord.Client):
     async def setup_hook(self):
         guild = discord.Object(id=GUILD_ID)
 
-        # 🔥 1. Cancello i comandi locali per quella guild
-        self.tree.clear_commands(guild=guild)
+        # Cancella tutti i comandi attuali della guild
+        for cmd in await self.tree.fetch_guild_commands(guild.id):
+            await self.tree.delete_guild_command(cmd.id, guild.id)
 
-        # 🔥 2. Cancello anche eventuali comandi globali (per sicurezza)
-        self.tree.clear_commands(guild=None)
-
-        # (opzionale) se vuoi ripulire anche i globali dal server:
-        await self.tree.sync(guild=None)
-        print("🧹 Comandi globali rimossi.")
-
-         # 🔥 3. Sync guild: carica SOLO quelli che hai definito nel codice
+        # Sincronizza i comandi attuali definiti nel codice
+        self.tree.copy_global_to(guild=guild)
         synced = await self.tree.sync(guild=guild)
-
-
         print(f"✅ Comandi sincronizzati sulla guild {GUILD_ID}: {[cmd.name for cmd in synced]}")
 
 client = MyClient()
