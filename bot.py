@@ -116,23 +116,45 @@ async def pesca(interaction: discord.Interaction):
     carte = pesca_carte(interaction.user.id, 1)
     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
 
-# pesca con numero
-# @client.tree.command(name="pesca2", description="Pesca due carte")
-# async def pesca2(interaction: discord.Interaction):
-#     carte = pesca_carte(interaction.user.id, 2)
-#     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
-
-# @client.tree.command(name="pesca5", description="Pesca cinque carte")
-# async def pesca5(interaction: discord.Interaction):
-#     carte = pesca_carte(interaction.user.id, 5)
-#     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
-
 # Comando per pesca_n
 @client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
 async def pesca_n(interaction: discord.Interaction, numero: int):
-    # pesca usando la funzione già definita che gestisce mazzo, assi e jolly
-    pescate = pesca_carte(interaction.user.id, numero)
+    user_id = interaction.user.id
+
+    # se il mazzo non esiste lo creiamo e mischiamo
+    if user_id not in mazzi:
+        mazzi[user_id] = mescola_mazzo(crea_mazzo())
+        scarti[user_id] = []
+        jolly_in_mano[user_id] = []
+
+    pescate = []
+    remaining = numero
+
+    while remaining > 0:
+        if not mazzi[user_id]:
+            # Rimettiamo gli scarti nel mazzo, escludendo i jolly, e mischiamo
+            mazzi[user_id] = mescola_mazzo([c for c in scarti[user_id] if c not in jolly])
+            scarti[user_id] = []
+        carta = mazzi[user_id].pop(0)
+
+        # Asso di picche: rimescoliamo mazzo + scarti esclusi i jolly
+        if carta == "A♠️":
+            mazzi[user_id].append(carta)
+            mazzi[user_id] = mescola_mazzo(mazzi[user_id] + [c for c in scarti[user_id] if c not in jolly])
+            scarti[user_id] = []
+            continue  # non conta come pescata, ripeschiamo
+
+        # Jolly vanno in mano
+        elif carta in jolly:
+            jolly_in_mano[user_id].append(carta)
+        else:
+            scarti[user_id].append(carta)
+
+        pescate.append(carta)
+        remaining -= 1
+
     await interaction.response.send_message(f"Hai pescato: {', '.join(pescate)}")
+
 
 
 
