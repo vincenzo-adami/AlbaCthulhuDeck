@@ -24,7 +24,9 @@ jolly_in_mano = {}
 # Funzioni mazzo
 # ===============================
 def crea_mazzo():
-    return [f"{v}{s}" for s in semi for v in valori]
+    mazzo = [f"{v}{s}" for s in semi for v in valori]
+    mazzo += jolly  # aggiunge i jolly al mazzo
+    return mazzo
 
 def mescola_mazzo(mazzo):
     random.shuffle(mazzo)
