@@ -123,29 +123,23 @@ async def pesca(interaction: discord.Interaction):
 #     carte = pesca_carte(interaction.user.id, 5)
 #     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
 
-@client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
-@app_commands.describe(numero="Quante carte vuoi pescare")
-async def pesca(interaction: discord.Interaction, numero: int):
-    global deck
+# all'inizio del file, subito dopo gli import
+deck = []  # inizializziamo la variabile globale
 
-    # Se il mazzo non esiste o è vuoto, crealo
+# Comando pesca_n corretto
+@client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
+async def pesca_n(interaction: discord.Interaction, numero: int):
+    global deck  # dichiariamo che useremo la variabile globale
+
+    # se il deck è vuoto, lo creiamo e mischiamo
     if not deck:
         deck = create_deck()
-        await interaction.channel.send("Il mazzo era vuoto, ne ho creato uno nuovo!")
+        shuffle_deck(deck)
 
-    if numero < 1:
-        await interaction.response.send_message("Devi pescare almeno 1 carta!", ephemeral=True)
-        return
-    if numero > len(deck):
-        await interaction.response.send_message(f"Non ci sono abbastanza carte nel mazzo! ({len(deck)} rimaste)", ephemeral=True)
-        return
-
-    pescate = random.sample(deck, k=numero)
-    # Rimuovi le carte pescate dal mazzo se vuoi
-    for c in pescate:
-        deck.remove(c)
-
+    # peschiamo le carte
+    pescate = [deck.pop() for _ in range(min(numero, len(deck)))]
     await interaction.response.send_message(f"Hai pescato: {', '.join(pescate)}")
+
 
 @client.tree.command(name="mischia", description="Rimischia il tuo mazzo senza i jolly")
 async def mischia(interaction: discord.Interaction):
