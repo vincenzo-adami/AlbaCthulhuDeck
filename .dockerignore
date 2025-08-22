@@ -1,0 +1,22 @@
+# Ignora cartelle di Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Ignora ambienti virtuali locali
+venv/
+.env
+
+# Ignora file di log e temporanei
+*.log
+*.tmp
+
+# Ignora configurazioni locali di IDE
+.vscode/
+.idea/
+
+# Ignora file di sistema
+.DS_Store
+Thumbs.db
