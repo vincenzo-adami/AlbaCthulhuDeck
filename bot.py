@@ -123,7 +123,7 @@ async def pesca(interaction: discord.Interaction):
 #     carte = pesca_carte(interaction.user.id, 5)
 #     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
 
-@client.tree.command(name="pescaN", description="Pesca un certo numero di carte")
+@client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
 @app_commands.describe(numero="Quante carte vuoi pescare")
 async def pesca(interaction: discord.Interaction, numero: int):
     global deck
