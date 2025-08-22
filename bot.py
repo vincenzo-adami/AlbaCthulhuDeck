@@ -113,15 +113,39 @@ async def pesca(interaction: discord.Interaction):
     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
 
 # pesca con numero
-@client.tree.command(name="pesca2", description="Pesca due carte")
-async def pesca2(interaction: discord.Interaction):
-    carte = pesca_carte(interaction.user.id, 2)
-    await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
+# @client.tree.command(name="pesca2", description="Pesca due carte")
+# async def pesca2(interaction: discord.Interaction):
+#     carte = pesca_carte(interaction.user.id, 2)
+#     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
 
-@client.tree.command(name="pesca5", description="Pesca cinque carte")
-async def pesca5(interaction: discord.Interaction):
-    carte = pesca_carte(interaction.user.id, 5)
-    await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
+# @client.tree.command(name="pesca5", description="Pesca cinque carte")
+# async def pesca5(interaction: discord.Interaction):
+#     carte = pesca_carte(interaction.user.id, 5)
+#     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
+
+@client.tree.command(name="pesca#", description="Pesca un certo numero di carte")
+@app_commands.describe(numero="Quante carte vuoi pescare")
+async def pesca(interaction: discord.Interaction, numero: int):
+    global deck
+
+    # Se il mazzo non esiste o è vuoto, crealo
+    if not deck:
+        deck = create_deck()
+        await interaction.channel.send("Il mazzo era vuoto, ne ho creato uno nuovo!")
+        
+    if numero < 1:
+        await interaction.response.send_message("Devi pescare almeno 1 carta!", ephemeral=True)
+        return
+    if numero > len(deck):
+        await interaction.response.send_message(f"Non ci sono abbastanza carte nel mazzo! ({len(deck)} rimaste)", ephemeral=True)
+        return
+
+    pescate = random.sample(deck, k=numero)
+    # Rimuovi le carte pescate dal mazzo se vuoi
+    for c in pescate:
+        deck.remove(c)
+
+    await interaction.response.send_message(f"Hai pescato: {', '.join(pescate)}")
 
 @client.tree.command(name="mischia", description="Rimischia il tuo mazzo senza i jolly")
 async def mischia(interaction: discord.Interaction):
