@@ -123,7 +123,7 @@ async def pesca(interaction: discord.Interaction):
 #     carte = pesca_carte(interaction.user.id, 5)
 #     await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
 
-@client.tree.command(name="pesca#", description="Pesca un certo numero di carte")
+@client.tree.command(name="pescaN", description="Pesca un certo numero di carte")
 @app_commands.describe(numero="Quante carte vuoi pescare")
 async def pesca(interaction: discord.Interaction, numero: int):
     global deck
@@ -132,7 +132,7 @@ async def pesca(interaction: discord.Interaction, numero: int):
     if not deck:
         deck = create_deck()
         await interaction.channel.send("Il mazzo era vuoto, ne ho creato uno nuovo!")
-        
+
     if numero < 1:
         await interaction.response.send_message("Devi pescare almeno 1 carta!", ephemeral=True)
         return
