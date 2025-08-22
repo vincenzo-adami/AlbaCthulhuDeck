@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from deck import create_deck, shuffle_deck
+from decks import create_deck, shuffle_deck
 
 # --- Legge il token ---
 # Railway → lo prende dalle "Environment Variables"
