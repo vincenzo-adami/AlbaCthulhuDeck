@@ -1,3 +1,3 @@
-# Versione: 2.0
+# Versione: 3.0
 
-  Novità: gestione jolly, comandi /pesca e /pescax, rimischio automatico Asso di Picche
+  Novità: correzzioni errori e creazione file docker per gestione deploy
