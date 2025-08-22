@@ -4,10 +4,9 @@ import random
 import os
 
 # ===============================
-# TOKEN e SERVER
+# TOKEN
 # ===============================
-TOKEN = os.getenv("TOKEN")
-GUILD_ID = int(os.getenv("DISCORD_GUILD_ID"))
+TOKEN = os.getenv("TOKEN")  # passato come variabile d'ambiente su Railway
 
 # ===============================
 # Dati mazzo
@@ -43,7 +42,8 @@ def pesca_carte(user_id, n=1):
             mazzi[user_id] = mescola_mazzo(crea_mazzo())
         carta = mazzi[user_id].pop(0)
         if carta == "A♠️":
-            mazzi[user_id] += mescola_mazzo([c for c in scarti[user_id] if c not in jolly] + ["A♠️"])
+            mazzi_user = [c for c in scarti[user_id] if c not in jolly]
+            mazzi[user_id] += mescola_mazzo(mazzi_user)
             scarti[user_id] = [c for c in scarti[user_id] if c in jolly]
             scarti[user_id].append(carta)
         elif carta in jolly:
@@ -57,8 +57,10 @@ def pesca_carte(user_id, n=1):
 def rimischia(user_id):
     if user_id in mazzi:
         mazzi[user_id] += [c for c in scarti[user_id] if c not in jolly]
-        mescola_mazzo(mazzi[user_id])
         scarti[user_id] = [c for c in scarti[user_id] if c in jolly]
+        mescola_mazzo(mazzi[user_id])
+        return True
+    return False
 
 def rimetti_jolly(user_id):
     if user_id in mazzi:
@@ -68,16 +70,20 @@ def rimetti_jolly(user_id):
 
 def get_scarti(user_id):
     if user_id not in scarti or not scarti[user_id]:
-        return "Nessuna carta scartata."
-    carte = scarti[user_id][:] + jolly_in_mano.get(user_id, [])
+        return None
+    carte = scarti[user_id][:]
+    carte += jolly_in_mano.get(user_id, [])
+    
     j = [c for c in jolly if c in carte]
     resto = [c for c in carte if c not in j]
+    
     seme_dict = {s: [] for s in semi}
     for c in resto:
         for s in semi:
             if s in c:
                 seme_dict[s].append(c)
                 break
+    
     risultato = []
     if j:
         risultato += j
@@ -89,6 +95,8 @@ def get_scarti(user_id):
 # ===============================
 # Client Discord
 # ===============================
+GUILD_ID = os.getenv("DISCORD_GUILD_ID")  # metti ID server
+
 class MyClient(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
@@ -97,16 +105,23 @@ class MyClient(discord.Client):
 
     async def setup_hook(self):
         guild = discord.Object(id=GUILD_ID)
+        
+        # Rimuove tutti i comandi del server
+        try:
+            existing = await self.tree.fetch_commands(guild=guild)
+            for cmd in existing:
+                await self.tree.remove_command(cmd.name, guild=guild)
+        except Exception:
+            pass  # ignora errori
 
-        # Cancella tutti i comandi vecchi
-        existing_commands = await self.tree.fetch_commands(guild=guild)
-        for cmd in existing_commands:
-            await self.tree.remove_command(cmd.name, type=cmd.type, guild=guild)
-        print(f"Rimossi {len(existing_commands)} comandi vecchi dal server.")
-
-        # Sincronizza i comandi definiti nel codice
+        # Sincronizza i comandi sul server
         synced = await self.tree.sync(guild=guild)
-        print(f"Comandi sincronizzati sul server: {[c.name for c in synced]}")
+
+        # DEBUG: stampa comandi sincronizzati
+        print("=== Comandi sincronizzati sul server ===")
+        for cmd in synced:
+            print(f"{cmd.name} - {cmd.description}")
+        print("=======================================")
 
 client = MyClient()
 
@@ -115,13 +130,15 @@ client = MyClient()
 # ===============================
 @client.tree.command(name="pesca", description="Pesca una carta")
 async def pesca(interaction: discord.Interaction):
-    carta = pesca_carte(interaction.user.id)[0]
+    user_id = interaction.user.id
+    carta = pesca_carte(user_id)[0]
     await interaction.response.send_message(f"Hai pescato: {carta}")
 
 @client.tree.command(name="pesca_n", description="Pesca un certo numero di carte")
 async def pesca_n(interaction: discord.Interaction, numero: int):
-    carte = pesca_carte(interaction.user.id, numero)
-    await interaction.response.send_message(f"Hai pescato: {', '.join(carte)}")
+    user_id = interaction.user.id
+    pescate = pesca_carte(user_id, numero)
+    await interaction.response.send_message(f"Hai pescato: {', '.join(pescate)}")
 
 @client.tree.command(name="mischia", description="Rimischia il tuo mazzo senza i jolly")
 async def mischia(interaction: discord.Interaction):
@@ -135,8 +152,12 @@ async def jolly_cmd(interaction: discord.Interaction):
 
 @client.tree.command(name="scarti", description="Mostra le carte già pescate")
 async def scarti_cmd(interaction: discord.Interaction):
-    risultato = get_scarti(interaction.user.id)
-    await interaction.response.send_message(risultato)
+    user_id = interaction.user.id
+    carte = get_scarti(user_id)
+    if carte:
+        await interaction.response.send_message(f"Carte scartate:\n{carte}")
+    else:
+        await interaction.response.send_message("Non hai ancora scartato carte.")
 
 # ===============================
 # Avvio bot
