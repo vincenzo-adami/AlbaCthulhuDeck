@@ -76,6 +76,7 @@ def draw_cards(player_id, n):
         card = player["deck"].pop(0)
         player["hand"].append(card)
         drawn.append(card)
+        # Jolly sempre in testa negli scarti
         if card in JOKERS:
             player["discards"].insert(0, card)
         else:
@@ -87,7 +88,7 @@ def reshuffle_discard(player_id):
     # Tutti tranne jolly
     cards_to_reshuffle = [c for c in player["discards"] if c not in JOKERS]
     player["deck"].extend(cards_to_reshuffle)
-    # Rimuovo dal discard
+    # Rimuovo dal discard tutto tranne jolly
     player["discards"] = [c for c in player["discards"] if c in JOKERS]
     random.shuffle(player["deck"])
 
@@ -117,12 +118,25 @@ async def scarti(interaction: discord.Interaction):
     if interaction.user.id not in players:
         await interaction.response.send_message("Non hai ancora giocato.")
         return
+
     discards = players[interaction.user.id]["discards"]
-    # Ordinamento jolly in testa e per semi
-    jokers = [c for c in discards if c in JOKERS]
-    non_jokers = sorted([c for c in discards if c not in JOKERS],
-                         key=lambda x: (x[-1], VALUES.index(x[:-1])))
-    ordered_discards = jokers + non_jokers
+
+    # Ordinamento dei semi
+    SUITS_ORDER = {v: i for i, v in enumerate(SUITS.values())}
+
+    # Funzione per ottenere la chiave di ordinamento
+    def card_value_key(card: str):
+        if card in JOKERS:
+            return (-1, -1)  # jolly in testa
+        for value in VALUES:
+            if card.startswith(value):
+                suit = card[len(value):]  # tutto il resto è il seme emoji
+                return (SUITS_ORDER.get(suit, 100), VALUES.index(value))
+        return (100, 100)  # fallback
+
+    # Ordinamento
+    ordered_discards = sorted(discards, key=card_value_key)
+
     await interaction.response.send_message(f"I tuoi scarti: {' '.join(ordered_discards)}")
 
 @bot.tree.command(name="mischia", description="Rimescola gli scarti nel mazzo")
