@@ -13,7 +13,7 @@ intents.message_content = True  # serve per leggere i contenuti dei messaggi
 class BriscolaBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="/", intents=intents)
-        self.tree = app_commands.CommandTree(self)
+        # self.tree = app_commands.CommandTree(self)
         self.players = {}  # player_id -> {"mazzo": [], "mano": [], "scarti": []}
 
     async def setup_hook(self):
