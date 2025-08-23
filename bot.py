@@ -24,6 +24,10 @@ VALUES = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
 # Due jolly
 JOKERS = ["🃏🔴", "🃏⚫"]
 
+# =========================
+# GESTIONE STATI
+# =========================
+
 # Dizionario giocatori
 players = {}
 
@@ -65,6 +69,22 @@ def reshuffle_discard(player_id):
     player["discards"] = [c for c in player["discards"] if c in JOKERS]
     random.shuffle(player["deck"])
 
+
+# =========================
+# BOT READY + SYNC
+# =========================
+@bot.event
+async def on_ready():
+    print(f"{bot.user} connesso.")
+    try:
+        synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+        print(f"Comandi sincronizzati: {[cmd.name for cmd in synced]}")
+    except Exception as e:
+        print(f"Errore sync: {e}")
+
+# =========================
+# COMANDI
+# =========================
 @bot.tree.command(name="pesca_n", description="Pesca N carte")
 async def pesca_n(interaction: discord.Interaction, n: int):
     cards = draw_cards(interaction.user.id, n)
