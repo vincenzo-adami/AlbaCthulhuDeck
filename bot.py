@@ -30,7 +30,7 @@ class BriscolaBot(commands.Bot):
             print(f"Errore sync comandi: {e}")
 
 bot = BriscolaBot()
-bot = commands.Bot(command_prefix="/", intents=intents)
+# bot = commands.Bot(command_prefix="/", intents=intents)
 
 # Emoji dei semi
 SUITS = {
