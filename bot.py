@@ -130,7 +130,10 @@ async def pesca_n(interaction: discord.Interaction, n: int):
         if card == f"A{SUITS['picche']}":
             # Rimescola tutti gli scarti tranne i jolly nel mazzo
             reshuffle_discard(interaction.user.id)
-            await interaction.followup.send(f"⚠️ Hai pescato l'Asso di Picche! Gli scarti sono stati rimescolati nel mazzo.")
+            message = f"Hai pescato: {' '.join(drawn)}"
+            if f"A{SUITS['picche']}" in drawn:
+                message += "\n⚠️ Hai pescato l'Asso di Picche! Gli scarti sono stati rimescolati nel mazzo."
+            await interaction.response.send_message(message)
             # Continuiamo a pescare le carte rimanenti
             continue
 
