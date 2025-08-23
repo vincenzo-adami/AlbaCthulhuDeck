@@ -3,7 +3,7 @@ from discord.ext import commands
 import random
 import os
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("TOKEN")
 GUILD_ID = int(os.getenv("DISCORD_GUILD_ID"))
 
 intents = discord.Intents.default()
