@@ -1,134 +1,154 @@
-import os
-import random
 import discord
-from discord import app_commands
 from discord.ext import commands
-from dotenv import load_dotenv
+import random
+import os
 
-load_dotenv()
-
-TOKEN = os.getenv("TOKEN")
+TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = int(os.getenv("DISCORD_GUILD_ID"))
 
 intents = discord.Intents.default()
-intents.message_content = True
+client = commands.Bot(command_prefix="!", intents=intents)
 
-class BriscolaBot(commands.Bot):
-    def __init__(self):
-        super().__init__(command_prefix="!", intents=intents)
-        self.tree = app_commands.CommandTree(self)
-        self.players = {}  # player_id -> {"mazzo": [], "mano": [], "scarti": []}
+# =========================
+# MAZZO DI CARTE
+# =========================
+semi = ["♠️", "♥️", "♦️", "♣️"]
+valori = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
+mazzo_base = [f"{val}{seme}" for seme in semi for val in valori]
+mazzo_base.append("🃏 Rosso")
+mazzo_base.append("🃏 Nero")
 
-    async def setup_hook(self):
-        # sincronizzazione comandi bulletproof
-        guild = discord.Object(id=GUILD_ID)
-        self.tree.copy_global_to(guild=guild)
-        try:
-            synced = await self.tree.sync(guild=guild)
-            print(f"=== Comandi sincronizzati sul server ({len(synced)}) ===")
-            for cmd in synced:
-                print(f"- {cmd.name}")
-            print("=======================================")
-        except Exception as e:
-            print(f"Errore sync comandi: {e}")
-
-client = BriscolaBot()
-
-# === COSTANTI MAZZO ===
-SUITS = ["♠️", "♥️", "♦️", "♣️"]
-RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"]
-JOKERS = ["JOKER ROSSO", "JOKER NERO"]
+# =========================
+# GESTIONE STATI
+# =========================
+mazzi_giocatori = {}
+scarti_giocatori = {}
 
 def crea_mazzo():
-    mazzo = [rank + suit for suit in SUITS for rank in RANKS]
-    mazzo.extend(JOKERS)
+    mazzo = mazzo_base.copy()
     random.shuffle(mazzo)
     return mazzo
 
-def get_player_data(user_id):
-    if user_id not in client.players:
-        client.players[user_id] = {
-            "mazzo": crea_mazzo(),
-            "mano": [],
-            "scarti": []
-        }
-    return client.players[user_id]
+def inizializza_giocatore(user_id):
+    mazzi_giocatori[user_id] = crea_mazzo()
+    scarti_giocatori[user_id] = []
 
-# === COMANDI ===
+# =========================
+# BOT READY + SYNC
+# =========================
+@client.event
+async def on_ready():
+    print(f"{client.user} connesso.")
+    try:
+        synced = await client.tree.sync(guild=discord.Object(id=GUILD_ID))
+        print(f"Comandi sincronizzati: {[cmd.name for cmd in synced]}")
+    except Exception as e:
+        print(f"Errore sync: {e}")
 
-@client.tree.command(name="pesca", description="Pesca una carta dal mazzo")
+# =========================
+# COMANDI
+# =========================
+@client.tree.command(name="pesca", description="Pesca una carta", guild=discord.Object(id=GUILD_ID))
 async def pesca(interaction: discord.Interaction):
-    player = get_player_data(interaction.user.id)
+    user_id = interaction.user.id
+    if user_id not in mazzi_giocatori:
+        inizializza_giocatore(user_id)
 
-    if not player["mazzo"]:
-        await interaction.response.send_message("Il mazzo è vuoto!", ephemeral=True)
-        return
+    mazzo = mazzi_giocatori[user_id]
+    scarti = scarti_giocatori[user_id]
 
-    carta = player["mazzo"].pop(0)
+    if not mazzo:  # se vuoto, rimescola
+        mazzo.extend([c for c in scarti if "🃏" not in c])
+        scarti[:] = [c for c in scarti if "🃏" in c]
+        random.shuffle(mazzo)
 
-    # gestione jolly
-    if carta in JOKERS:
-        player["scarti"].append(carta)
-        await interaction.response.send_message(f"Hai pescato un **{carta}** (finisce subito negli scarti)")
-        return
+    carta = mazzo.pop()
+    scarti.append(carta)
 
-    # gestione normale
-    player["mano"].append(carta)
-    await interaction.response.send_message(f"Hai pescato: **{carta}**")
-
-    # controllo Asso di Picche
+    # logica asso di picche
     if carta == "A♠️":
-        # rimescola scarti (esclusi i jolly) nel mazzo
-        da_rimescolare = [c for c in player["scarti"] if c not in JOKERS]
-        player["mazzo"].extend(da_rimescolare)
-        random.shuffle(player["mazzo"])
-        player["scarti"] = [c for c in player["scarti"] if c in JOKERS]
-        await interaction.followup.send("Hai pescato l'**Asso di Picche**! Gli scarti (senza Jolly) tornano nel mazzo.")
+        mazzo.extend([c for c in scarti if "🃏" not in c])
+        scarti[:] = [c for c in scarti if "🃏" in c]
+        random.shuffle(mazzo)
+        await interaction.response.send_message(
+            f"Hai pescato {carta}! Tutti gli scarti (tranne i jolly) sono stati rimischiati nel mazzo."
+        )
+    else:
+        await interaction.response.send_message(f"Hai pescato: {carta}")
 
-@client.tree.command(name="scarti", description="Mostra le carte negli scarti")
+@client.tree.command(name="pesca_n", description="Pesca N carte", guild=discord.Object(id=GUILD_ID))
+async def pesca_n(interaction: discord.Interaction, numero: int):
+    user_id = interaction.user.id
+    if user_id not in mazzi_giocatori:
+        inizializza_giocatore(user_id)
+
+    mazzo = mazzi_giocatori[user_id]
+    scarti = scarti_giocatori[user_id]
+
+    pescate = []
+    for _ in range(numero):
+        if not mazzo:
+            mazzo.extend([c for c in scarti if "🃏" not in c])
+            scarti[:] = [c for c in scarti if "🃏" in c]
+            random.shuffle(mazzo)
+
+        if not mazzo:  # protezione extra
+            break
+
+        carta = mazzo.pop()
+        scarti.append(carta)
+        pescate.append(carta)
+
+        if carta == "A♠️":
+            mazzo.extend([c for c in scarti if "🃏" not in c])
+            scarti[:] = [c for c in scarti if "🃏" in c]
+            random.shuffle(mazzo)
+
+    if pescate:
+        await interaction.response.send_message(
+            f"Hai pescato: {', '.join(pescate)}"
+        )
+    else:
+        await interaction.response.send_message("Non ci sono abbastanza carte da pescare.")
+
+@client.tree.command(name="scarti", description="Mostra gli scarti", guild=discord.Object(id=GUILD_ID))
 async def scarti(interaction: discord.Interaction):
-    player = get_player_data(interaction.user.id)
-    if not player["scarti"]:
-        await interaction.response.send_message("Non ci sono scarti.")
-        return
-    scarti_txt = ", ".join(player["scarti"])
-    await interaction.response.send_message(f"Scarti attuali: {scarti_txt}")
+    user_id = interaction.user.id
+    if user_id not in scarti_giocatori:
+        inizializza_giocatore(user_id)
 
-@client.tree.command(name="mischia", description="Rimescola gli scarti nel mazzo")
+    scarti = scarti_giocatori[user_id]
+    if scarti:
+        await interaction.response.send_message(f"Scarti: {', '.join(scarti)}")
+    else:
+        await interaction.response.send_message("Nessuno scarto.")
+
+@client.tree.command(name="mischia", description="Rimischia gli scarti nel mazzo (tranne i jolly)", guild=discord.Object(id=GUILD_ID))
 async def mischia(interaction: discord.Interaction):
-    player = get_player_data(interaction.user.id)
-    if not player["scarti"]:
-        await interaction.response.send_message("Non ci sono scarti da rimescolare.")
+    user_id = interaction.user.id
+    if user_id not in mazzi_giocatori:
+        inizializza_giocatore(user_id)
+
+    mazzo = mazzi_giocatori[user_id]
+    scarti = scarti_giocatori[user_id]
+
+    if not scarti:
+        await interaction.response.send_message("Non ci sono scarti da rimischiare.")
         return
 
-    da_rimescolare = [c for c in player["scarti"] if c not in JOKERS]
-    if not da_rimescolare:
-        await interaction.response.send_message("Negli scarti ci sono solo Jolly, non rimescolati.")
-        return
+    mazzo.extend([c for c in scarti if "🃏" not in c])
+    scarti[:] = [c for c in scarti if "🃏" in c]
+    random.shuffle(mazzo)
 
-    player["mazzo"].extend(da_rimescolare)
-    random.shuffle(player["mazzo"])
-    player["scarti"] = [c for c in player["scarti"] if c in JOKERS]
+    await interaction.response.send_message("Gli scarti (tranne i jolly) sono stati rimischiati nel mazzo.")
 
-    await interaction.response.send_message("Gli scarti (senza Jolly) sono stati rimescolati nel mazzo!")
-
-@client.tree.command(name="mano", description="Mostra le tue carte in mano")
-async def mano(interaction: discord.Interaction):
-    player = get_player_data(interaction.user.id)
-    if not player["mano"]:
-        await interaction.response.send_message("Non hai carte in mano.")
-        return
-    mano_txt = ", ".join(player["mano"])
-    await interaction.response.send_message(f"Carte in mano: {mano_txt}")
-
-@client.tree.command(name="reset", description="Resetta il tuo mazzo")
+@client.tree.command(name="reset", description="Resetta il tuo mazzo e gli scarti", guild=discord.Object(id=GUILD_ID))
 async def reset(interaction: discord.Interaction):
-    client.players[interaction.user.id] = {
-        "mazzo": crea_mazzo(),
-        "mano": [],
-        "scarti": []
-    }
-    await interaction.response.send_message("Il tuo mazzo è stato resettato!")
+    inizializza_giocatore(interaction.user.id)
+    await interaction.response.send_message("Il tuo mazzo è stato resettato.")
 
+# =========================
+# AVVIO BOT
+# =========================
 if __name__ == "__main__":
     client.run(TOKEN)
