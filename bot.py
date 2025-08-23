@@ -121,32 +121,36 @@ async def scarti(interaction: discord.Interaction):
 
     discards = players[interaction.user.id]["discards"]
 
-    # Jolly in testa
+    # Separiamo jolly e carte normali
     jokers = [c for c in discards if c in JOKERS]
-    
-    # Carte divise per seme
-    suits_dict = {emoji: [] for emoji in SUITS.values()}
-    for c in discards:
-        if c not in JOKERS:
-            for emoji in SUITS.values():
-                if c.endswith(emoji):
-                    suits_dict[emoji].append(c)
-                    break
+    normal_cards = [c for c in discards if c not in JOKERS]
 
-    # Ordinamento per VALUES
+    # Funzione per ottenere il valore della carta (rimuovendo il seme emoji)
+    def get_card_value(card):
+        for value in VALUES:
+            if card.startswith(value):
+                return value
+        return card  # fallback, non dovrebbe succedere
+
+    # Raggruppiamo per seme
+    suits_dict = {}
+    for card in normal_cards:
+        suit = card[-2:] if card[-2:] in SUITS.values() else card[-1]  # gestisce emoji lunghe
+        suits_dict.setdefault(suit, []).append(card)
+
+    # Ordiniamo ogni seme per valore
     for emoji, cards in suits_dict.items():
-        suits_dict[emoji] = sorted(cards, key=lambda x: VALUES.index(x[:-1]))
+        suits_dict[emoji] = sorted(cards, key=lambda x: VALUES.index(get_card_value(x)))
 
-    # Creazione del messaggio finale
-    msg_lines = []
+    # Costruiamo il testo finale
+    lines = []
     if jokers:
-        msg_lines.append(" ".join(jokers))
-    for emoji, cards in suits_dict.items():
-        if cards:
-            msg_lines.append(f"{emoji}: {' '.join(cards)}")
+        lines.append("Jolly: " + " ".join(jokers))
+    for suit_emoji in SUITS.values():
+        if suit_emoji in suits_dict:
+            lines.append(f"{suit_emoji}: " + " ".join(suits_dict[suit_emoji]))
 
-    await interaction.response.send_message("I tuoi scarti:\n" + "\n".join(msg_lines))
-
+    await interaction.response.send_message("I tuoi scarti:\n" + "\n".join(lines))
 
 @bot.tree.command(name="mischia", description="Rimescola gli scarti nel mazzo")
 async def mischia(interaction: discord.Interaction):
