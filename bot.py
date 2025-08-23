@@ -7,7 +7,10 @@ TOKEN = os.getenv("TOKEN")
 GUILD_ID = int(os.getenv("DISCORD_GUILD_ID"))
 
 intents = discord.Intents.default()
-client = commands.Bot(command_prefix="!", intents=intents)
+intents.message_content = True  # serve per leggere i contenuti dei messaggi
+
+# === Creazione del bot ===
+client = commands.Bot(command_prefix="/", intents=intents)
 
 # =========================
 # MAZZO DI CARTE
