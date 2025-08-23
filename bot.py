@@ -36,6 +36,47 @@ def inizializza_giocatore(user_id):
     mazzi_giocatori[user_id] = crea_mazzo()
     scarti_giocatori[user_id] = []
 
+def formatta_scarti(scarti):
+    if not scarti:
+        return "Nessuna carta scartata."
+
+    # Joker prima di tutto
+    joker_rosso = "🃏 (Rosso)"
+    joker_nero = "🃏 (Nero)"
+    output = []
+
+    # Se ci sono i joker li mettiamo in cima
+    if joker_rosso in scarti:
+        output.append(joker_rosso)
+    if joker_nero in scarti:
+        output.append(joker_nero)
+
+    # Definizione semi in ordine
+    semi = {
+        "♠️": "Picche",
+        "♥️": "Cuori",
+        "♦️": "Quadri",
+        "♣️": "Fiori"
+    }
+
+    # Valori in ordine logico
+    valori = ["A", "2", "3", "4", "5", "6", "7",
+              "8", "9", "10", "J", "Q", "K"]
+
+    # Raggruppiamo per seme
+    for simbolo, nome in semi.items():
+        carte_seme = [c for c in scarti if simbolo in c]
+        if carte_seme:
+            ordinate = sorted(
+                carte_seme,
+                key=lambda c: valori.index(
+                    c.replace(simbolo, "").strip()
+                )
+            )
+            output.append(f"**{nome} {simbolo}:** " + " ".join(ordinate))
+
+    return "\n".join(output)
+
 # =========================
 # BOT READY + SYNC
 # =========================
@@ -122,7 +163,7 @@ async def scarti(interaction: discord.Interaction):
 
     scarti = scarti_giocatori[user_id]
     if scarti:
-        await interaction.response.send_message(f"Scarti: {', '.join(scarti)}")
+        await interaction.response.send_message(formatta_scarti(scarti))
     else:
         await interaction.response.send_message("Nessuno scarto.")
 
