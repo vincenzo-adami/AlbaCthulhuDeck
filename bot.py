@@ -1,13 +1,36 @@
-import discord
-from discord.ext import commands
 import random
 import os
+import discord
+from discord.ext import commands
+from discord import app_commands
+from discord.ext import commands
+from dotenv import load_dotenv
 
 TOKEN = os.environ.get("TOKEN")
 GUILD_ID = int(os.environ.get("DISCORD_GUILD_ID"))
 
 intents = discord.Intents.default()
 intents.message_content = True  # serve per leggere i contenuti dei messaggi
+class BriscolaBot(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix="/", intents=intents)
+        self.tree = app_commands.CommandTree(self)
+        self.players = {}  # player_id -> {"mazzo": [], "mano": [], "scarti": []}
+
+    async def setup_hook(self):
+        # sincronizzazione comandi bulletproof
+        guild = discord.Object(id=GUILD_ID)
+        self.tree.copy_global_to(guild=guild)
+        try:
+            synced = await self.tree.sync(guild=guild)
+            print(f"=== Comandi sincronizzati sul server ({len(synced)}) ===")
+            for cmd in synced:
+                print(f"- {cmd.name}")
+            print("=======================================")
+        except Exception as e:
+            print(f"Errore sync comandi: {e}")
+
+bot = BriscolaBot()
 bot = commands.Bot(command_prefix="/", intents=intents)
 
 # Emoji dei semi
