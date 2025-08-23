@@ -108,10 +108,40 @@ async def on_ready():
 # =========================
 # COMANDI
 # =========================
-@bot.tree.command(name="pesca_n", description="Pesca N carte")
+@bot.tree.command(name="pesca", description="Pesca N carte")
 async def pesca_n(interaction: discord.Interaction, n: int):
-    cards = draw_cards(interaction.user.id, n)
-    await interaction.response.send_message(f"Hai pescato: {' '.join(cards)}")
+    if interaction.user.id not in players:
+        players[interaction.user.id] = {"deck": initialize_deck(), "hand": [], "discards": []}
+    player = players[interaction.user.id]
+
+    drawn = []
+    remaining = n
+    while remaining > 0:
+        if not player["deck"]:
+            reshuffle_discard(interaction.user.id)
+        if not player["deck"]:
+            break  # Nessuna carta disponibile
+        card = player["deck"].pop(0)
+        player["hand"].append(card)
+        drawn.append(card)
+        remaining -= 1
+
+        # Se esce l'asso di picche
+        if card == f"A{SUITS['picche']}":
+            # Rimescola tutti gli scarti tranne i jolly nel mazzo
+            reshuffle_discard(interaction.user.id)
+            await interaction.followup.send(f"⚠️ Hai pescato l'Asso di Picche! Gli scarti sono stati rimescolati nel mazzo.")
+            # Continuiamo a pescare le carte rimanenti
+            continue
+
+        # Gestione scarti: jolly in testa, altri in coda
+        if card in JOKERS:
+            player["discards"].insert(0, card)
+        else:
+            player["discards"].append(card)
+
+    await interaction.response.send_message(f"Hai pescato: {' '.join(drawn)}")
+
 
 @bot.tree.command(name="scarti", description="Mostra gli scarti")
 async def scarti(interaction: discord.Interaction):
