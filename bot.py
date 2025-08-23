@@ -4,7 +4,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from discord.ext import commands
-from dotenv import load_dotenv
 
 TOKEN = os.environ.get("TOKEN")
 GUILD_ID = int(os.environ.get("DISCORD_GUILD_ID"))
@@ -145,10 +144,10 @@ async def jolly(interaction: discord.Interaction):
             return
     await interaction.response.send_message("Non ci sono jolly da rimescolare.")
 
-@bot.event
-async def on_ready():
-    guild = discord.Object(id=GUILD_ID)
-    await bot.tree.sync(guild=guild)
-    print("Bot pronto e comandi sincronizzati sul server.")
+# @bot.event
+# async def on_ready():
+#     guild = discord.Object(id=GUILD_ID)
+#     await bot.tree.sync(guild=guild)
+#     print("Bot pronto e comandi sincronizzati sul server.")
 
 bot.run(TOKEN)
