@@ -121,23 +121,32 @@ async def scarti(interaction: discord.Interaction):
 
     discards = players[interaction.user.id]["discards"]
 
-    # Ordinamento dei semi
-    SUITS_ORDER = {v: i for i, v in enumerate(SUITS.values())}
+    # Jolly in testa
+    jokers = [c for c in discards if c in JOKERS]
+    
+    # Carte divise per seme
+    suits_dict = {emoji: [] for emoji in SUITS.values()}
+    for c in discards:
+        if c not in JOKERS:
+            for emoji in SUITS.values():
+                if c.endswith(emoji):
+                    suits_dict[emoji].append(c)
+                    break
 
-    # Funzione per ottenere la chiave di ordinamento
-    def card_value_key(card: str):
-        if card in JOKERS:
-            return (-1, -1)  # jolly in testa
-        for value in VALUES:
-            if card.startswith(value):
-                suit = card[len(value):]  # tutto il resto è il seme emoji
-                return (SUITS_ORDER.get(suit, 100), VALUES.index(value))
-        return (100, 100)  # fallback
+    # Ordinamento per VALUES
+    for emoji, cards in suits_dict.items():
+        suits_dict[emoji] = sorted(cards, key=lambda x: VALUES.index(x[:-1]))
 
-    # Ordinamento
-    ordered_discards = sorted(discards, key=card_value_key)
+    # Creazione del messaggio finale
+    msg_lines = []
+    if jokers:
+        msg_lines.append(" ".join(jokers))
+    for emoji, cards in suits_dict.items():
+        if cards:
+            msg_lines.append(f"{emoji}: {' '.join(cards)}")
 
-    await interaction.response.send_message(f"I tuoi scarti: {' '.join(ordered_discards)}")
+    await interaction.response.send_message("I tuoi scarti:\n" + "\n".join(msg_lines))
+
 
 @bot.tree.command(name="mischia", description="Rimescola gli scarti nel mazzo")
 async def mischia(interaction: discord.Interaction):
